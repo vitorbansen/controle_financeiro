@@ -1,0 +1,60 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                   String                 @id @default(uuid())
+  email                String                 @unique
+  password             String
+  name                 String?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  profile              Profile?               
+  transactions         Transaction[]
+  recurringTransactions RecurringTransaction[]
+}
+
+model Profile {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  data      String   @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Transaction {
+  id            String    @id @default(uuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  type          String    // 'entrada' or 'saida'
+  description   String
+  value         Float
+  category      String
+  date          DateTime
+  isParcelled   Boolean   @default(false)
+  parcelNumber  Int?      // Current parcel number (e.g., 1, 2, 3)
+  totalParcels  Int?      // Total number of parcels
+  groupId       String?   // To group parcelled transactions
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model RecurringTransaction {
+  id            String    @id @default(uuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  type          String    // 'entrada' or 'saida'
+  description   String
+  value         Float
+  category      String
+  dueDay        Int       // Day of the month when it's due
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
