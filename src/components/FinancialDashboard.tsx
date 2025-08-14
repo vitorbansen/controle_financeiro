@@ -184,17 +184,61 @@ const FinancialDashboard = () => {
     return transacao.valor;
   };
 
+  // NOVA FUNÇÃO: Calcular valores das transações recorrentes para um mês específico
+  const calcularRecorrentesDoMes = (mes: number) => {
+    const dataAtual = new Date();
+    const mesAtual = dataAtual.getMonth() + 1;
+    const anoAtual = dataAtual.getFullYear();
+    
+    let totalEntradas = 0;
+    let totalSaidas = 0;
+
+    // Só incluir recorrentes se o mês for atual ou futuro
+    if (ano > anoAtual || (ano === anoAtual && mes >= mesAtual)) {
+      transacoesRecorrentes.filter(t => t.ativa).forEach(recorrente => {
+        // Se for o mês atual, só incluir se o dia ainda não passou
+        if (ano === anoAtual && mes === mesAtual) {
+          const diaAtual = dataAtual.getDate();
+          if (recorrente.diaVencimento >= diaAtual) {
+            if (recorrente.tipo === 'entrada') {
+              totalEntradas += recorrente.valor;
+            } else {
+              totalSaidas += recorrente.valor;
+            }
+          }
+        } else {
+          // Para meses futuros, incluir todas as recorrentes
+          if (recorrente.tipo === 'entrada') {
+            totalEntradas += recorrente.valor;
+          } else {
+            totalSaidas += recorrente.valor;
+          }
+        }
+      });
+    }
+
+    return { entradas: totalEntradas, saidas: totalSaidas };
+  };
+
   const calcularResumoMes = (mes: number) => {
     const transacoesMes = transacoes[ano]?.[mes];
-    if (!transacoesMes) return { entradas: 0, saidas: 0, saldo: 0 };
+    let entradas = 0;
+    let saidas = 0;
 
-    const entradas = transacoesMes.entradas.reduce((sum, t) => {
-      return sum + calcularValorReal(t);
-    }, 0);
-    
-    const saidas = transacoesMes.saidas.reduce((sum, t) => {
-      return sum + calcularValorReal(t);
-    }, 0);
+    if (transacoesMes) {
+      entradas = transacoesMes.entradas.reduce((sum, t) => {
+        return sum + calcularValorReal(t);
+      }, 0);
+      
+      saidas = transacoesMes.saidas.reduce((sum, t) => {
+        return sum + calcularValorReal(t);
+      }, 0);
+    }
+
+    // Incluir transações recorrentes
+    const recorrentes = calcularRecorrentesDoMes(mes);
+    entradas += recorrentes.entradas;
+    saidas += recorrentes.saidas;
     
     return { entradas, saidas, saldo: entradas - saidas };
   };
@@ -203,6 +247,7 @@ const FinancialDashboard = () => {
     let totalEntradas = 0;
     let totalSaidas = 0;
 
+    // Calcular transações normais
     Object.values(transacoes[ano] || {}).forEach(mes => {
       totalEntradas += mes.entradas.reduce((sum, t) => {
         return sum + calcularValorReal(t);
@@ -213,6 +258,13 @@ const FinancialDashboard = () => {
       }, 0);
     });
 
+    // Incluir transações recorrentes para todos os meses
+    for (let mes = 1; mes <= 12; mes++) {
+      const recorrentes = calcularRecorrentesDoMes(mes);
+      totalEntradas += recorrentes.entradas;
+      totalSaidas += recorrentes.saidas;
+    }
+
     return {
       entradas: totalEntradas,
       saidas: totalSaidas,
@@ -220,8 +272,9 @@ const FinancialDashboard = () => {
     };
   };
 
+  // CORREÇÃO: Função para formatar data corrigindo o problema do UTC
   const formatarData = (dataString: string) => {
-    const data = new Date(dataString);
+    const data = new Date(dataString + 'T00:00:00'); // Força horário local
     return data.toLocaleDateString('pt-BR');
   };
 
@@ -838,7 +891,7 @@ const FinancialDashboard = () => {
                 onChange={(e) => setAno(parseInt(e.target.value))}
                 className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white/50 backdrop-blur-sm text-slate-900 placeholder-slate-500 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-slate-400 appearance-none cursor-pointer"
               >
-                {[2023, 2024, 2025].map(year => (
+                {[2024, 2025, 2026, 2027].map(year => (
                   <option key={year} value={year}>{year}</option>
                 ))}
               </select>
