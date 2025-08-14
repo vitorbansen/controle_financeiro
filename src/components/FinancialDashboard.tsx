@@ -184,7 +184,7 @@ const FinancialDashboard = () => {
     return transacao.valor;
   };
 
-  // NOVA FUNÇÃO: Calcular valores das transações recorrentes para um mês específico
+  // CORREÇÃO: Função melhorada para calcular valores das transações recorrentes
   const calcularRecorrentesDoMes = (mes: number) => {
     const dataAtual = new Date();
     const mesAtual = dataAtual.getMonth() + 1;
@@ -193,21 +193,30 @@ const FinancialDashboard = () => {
     let totalEntradas = 0;
     let totalSaidas = 0;
 
-    // Só incluir recorrentes se o mês for atual ou futuro
-    if (ano > anoAtual || (ano === anoAtual && mes >= mesAtual)) {
+    // Incluir recorrentes para o ano selecionado
+    if (ano >= anoAtual) {
       transacoesRecorrentes.filter(t => t.ativa).forEach(recorrente => {
-        // Se for o mês atual, só incluir se o dia ainda não passou
-        if (ano === anoAtual && mes === mesAtual) {
-          const diaAtual = dataAtual.getDate();
-          if (recorrente.diaVencimento >= diaAtual) {
+        // Para o ano atual
+        if (ano === anoAtual) {
+          // Para o mês atual, incluir todas as recorrentes (independente do dia)
+          if (mes === mesAtual) {
             if (recorrente.tipo === 'entrada') {
               totalEntradas += recorrente.valor;
             } else {
               totalSaidas += recorrente.valor;
             }
           }
-        } else {
-          // Para meses futuros, incluir todas as recorrentes
+          // Para meses futuros no ano atual
+          else if (mes > mesAtual) {
+            if (recorrente.tipo === 'entrada') {
+              totalEntradas += recorrente.valor;
+            } else {
+              totalSaidas += recorrente.valor;
+            }
+          }
+        }
+        // Para anos futuros, incluir todas as recorrentes em todos os meses
+        else if (ano > anoAtual) {
           if (recorrente.tipo === 'entrada') {
             totalEntradas += recorrente.valor;
           } else {
@@ -218,6 +227,52 @@ const FinancialDashboard = () => {
     }
 
     return { entradas: totalEntradas, saidas: totalSaidas };
+  };
+
+  // NOVA FUNÇÃO: Gerar transações recorrentes virtuais para exibição
+  const gerarTransacoesRecorrentesVirtuais = (mes: number): (Transaction & { tipoTransacao: 'entrada' | 'saida', isRecorrente: true })[] => {
+    const dataAtual = new Date();
+    const mesAtual = dataAtual.getMonth() + 1;
+    const anoAtual = dataAtual.getFullYear();
+    
+    const transacoesVirtuais: (Transaction & { tipoTransacao: 'entrada' | 'saida', isRecorrente: true })[] = [];
+
+    // Só incluir se for ano atual ou futuro
+    if (ano >= anoAtual) {
+      transacoesRecorrentes.filter(t => t.ativa).forEach(recorrente => {
+        let incluir = false;
+
+        if (ano === anoAtual) {
+          // Para o ano atual, incluir se for mês atual ou futuro
+          if (mes >= mesAtual) {
+            incluir = true;
+          }
+        } else {
+          // Para anos futuros, incluir sempre
+          incluir = true;
+        }
+
+        if (incluir) {
+          // Criar uma data para o dia de vencimento no mês/ano selecionado
+          const dataVencimento = new Date(ano, mes - 1, recorrente.diaVencimento);
+          
+          transacoesVirtuais.push({
+            id: `recorrente-${recorrente.id}-${ano}-${mes}`,
+            descricao: recorrente.descricao,
+            valor: recorrente.valor,
+            categoria: recorrente.categoria,
+            data: dataVencimento.toISOString().split('T')[0],
+            tipo: recorrente.tipo,
+            tipoTransacao: recorrente.tipo,
+            recorrente: true,
+            recorrenteId: recorrente.id,
+            isRecorrente: true
+          });
+        }
+      });
+    }
+
+    return transacoesVirtuais;
   };
 
   const calcularResumoMes = (mes: number) => {
@@ -436,12 +491,16 @@ const FinancialDashboard = () => {
     const resumo = calcularResumoMes(mesSelecionado);
     
     // Combinar e ordenar todas as transações por data
-    const todasTransacoes: (Transaction & { tipoTransacao: 'entrada' | 'saida' })[] = [];
+    const todasTransacoes: (Transaction & { tipoTransacao: 'entrada' | 'saida', isRecorrente?: boolean })[] = [];
     
     if (transacoesMes) {
       transacoesMes.entradas.forEach(t => todasTransacoes.push({...t, tipoTransacao: 'entrada'}));
       transacoesMes.saidas.forEach(t => todasTransacoes.push({...t, tipoTransacao: 'saida'}));
     }
+    
+    // NOVA CORREÇÃO: Adicionar transações recorrentes virtuais ao resumo mensal
+    const transacoesRecorrentesVirtuais = gerarTransacoesRecorrentesVirtuais(mesSelecionado);
+    transacoesRecorrentesVirtuais.forEach(t => todasTransacoes.push(t));
     
     todasTransacoes.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
 
@@ -595,15 +654,26 @@ const FinancialDashboard = () => {
                       <span className={`font-bold text-lg ${transacao.tipoTransacao === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
                         {transacao.tipoTransacao === 'entrada' ? '+' : '-'}R$ {valorExibicao.toFixed(2)}
                       </span>
-                      <button
-                        onClick={() => removerTransacao(transacao.id)}
-                        className="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 transition-colors duration-200"
-                        title="Remover transação"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+                      {/* CORREÇÃO: Só mostrar botão de excluir para transações não recorrentes */}
+                      {!transacao.isRecorrente && (
+                        <button
+                          onClick={() => removerTransacao(transacao.id)}
+                          className="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 transition-colors duration-200"
+                          title="Remover transação"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      )}
+                      {/* Para transações recorrentes, mostrar apenas um indicador visual */}
+                      {transacao.isRecorrente && (
+                        <div className="p-2 text-purple-400" title="Transação recorrente - gerencie na aba de recorrentes">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -673,7 +743,7 @@ const FinancialDashboard = () => {
           <div className="border-b border-slate-200 pb-4 mb-6">
             <h3 className="text-xl font-semibold text-slate-900 flex items-center gap-3">
               <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2-2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
               Resumo Anual - {ano}
             </h3>
