@@ -342,6 +342,3 @@ Este projeto serve como uma base sólida para uma aplicação de controle financ
 
 ---
 
-
-
-**Desenvolvido com ❤️ e passando raiva usando Next.js 15 e App Router**
