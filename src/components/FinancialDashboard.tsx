@@ -166,7 +166,7 @@ const FinancialDashboard = () => {
     }
   };
 
-  // CORREÇÃO 1: Função específica para remover transações recorrentes
+  //  Função específica para remover transações recorrentes
   const removerTransacaoRecorrente = async (id: string) => {
     try {
       await api.delete(`/recurring-transactions/${id}`);
@@ -176,7 +176,7 @@ const FinancialDashboard = () => {
     }
   };
 
-  // CORREÇÃO 2: Função para calcular o valor real da transação (considerando parcelamento)
+  //  Função para calcular o valor real da transação (considerando parcelamento)
   const calcularValorReal = (transacao: Transaction) => {
     if (transacao.parcelado && transacao.totalParcelas && transacao.totalParcelas > 1) {
       return transacao.valor / transacao.totalParcelas;
@@ -184,7 +184,7 @@ const FinancialDashboard = () => {
     return transacao.valor;
   };
 
-  // CORREÇÃO: Função melhorada para calcular valores das transações recorrentes
+  // Função melhorada para calcular valores das transações recorrentes
   const calcularRecorrentesDoMes = (mes: number) => {
     const dataAtual = new Date();
     const mesAtual = dataAtual.getMonth() + 1;
@@ -327,7 +327,7 @@ const FinancialDashboard = () => {
     };
   };
 
-  // CORREÇÃO: Função para formatar data corrigindo o problema do UTC
+  //  Função para formatar data corrigindo o problema do UTC
   const formatarData = (dataString: string) => {
     const data = new Date(dataString + 'T00:00:00'); // Força horário local
     return data.toLocaleDateString('pt-BR');
@@ -498,7 +498,7 @@ const FinancialDashboard = () => {
       transacoesMes.saidas.forEach(t => todasTransacoes.push({...t, tipoTransacao: 'saida'}));
     }
     
-    // NOVA CORREÇÃO: Adicionar transações recorrentes virtuais ao resumo mensal
+    // Adicionar transações recorrentes virtuais ao resumo mensal
     const transacoesRecorrentesVirtuais = gerarTransacoesRecorrentesVirtuais(mesSelecionado);
     transacoesRecorrentesVirtuais.forEach(t => todasTransacoes.push(t));
     
@@ -601,7 +601,7 @@ const FinancialDashboard = () => {
               </div>
             ) : (
               todasTransacoes.map(transacao => {
-                // CORREÇÃO 3: Calcular o valor real para exibição no card
+                // Calcular o valor real para exibição no card
                 const valorExibicao = calcularValorReal(transacao);
                 
                 return (
@@ -654,7 +654,7 @@ const FinancialDashboard = () => {
                       <span className={`font-bold text-lg ${transacao.tipoTransacao === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
                         {transacao.tipoTransacao === 'entrada' ? '+' : '-'}R$ {valorExibicao.toFixed(2)}
                       </span>
-                      {/* CORREÇÃO: Só mostrar botão de excluir para transações não recorrentes */}
+                      {/*  Só mostrar botão de excluir para transações não recorrentes */}
                       {!transacao.isRecorrente && (
                         <button
                           onClick={() => removerTransacao(transacao.id)}
@@ -965,11 +965,18 @@ const FinancialDashboard = () => {
                   <option key={year} value={year}>{year}</option>
                 ))}
               </select>
+              
                <button
-                onClick={() => router.push("/categorys")}
+                onClick={() => router.push("/temporalAnalysis")}
                 className="text-sm px-4 py-3 rounded-xl bg-blue-500 text-white font-medium shadow-md hover:bg-blue-600 transition-all"
               >
-                Análise de Categorias
+                Análise Temporal
+              </button>
+              <button
+                onClick={() => router.push("/categorys")}
+                className="text-sm px-4 py-3 rounded-xl bg-purple-500 text-white font-medium shadow-md hover:bg-purple-600 transition-all"
+              >
+                Categorias
               </button>
               <button
                 onClick={handleLogout}
