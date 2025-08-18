@@ -965,7 +965,12 @@ const FinancialDashboard = () => {
                   <option key={year} value={year}>{year}</option>
                 ))}
               </select>
-              
+               <button
+                onClick={() => router.push("/categorys")}
+                className="text-sm px-4 py-3 rounded-xl bg-blue-500 text-white font-medium shadow-md hover:bg-blue-600 transition-all"
+              >
+                Análise de Categorias
+              </button>
               <button
                 onClick={handleLogout}
                 className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 focus:ring-slate-500 shadow-sm hover:shadow-md"
