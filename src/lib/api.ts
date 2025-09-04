@@ -1,7 +1,10 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL:
+    typeof window === 'undefined'
+      ? process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'
+      : '/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -18,9 +21,7 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 // Interceptor para lidar com respostas de erro
@@ -39,4 +40,3 @@ api.interceptors.response.use(
 );
 
 export default api;
-
